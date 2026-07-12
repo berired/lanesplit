@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         href="/"
         className="mb-8 text-lg font-semibold tracking-tight text-foreground"
       >
-        Rift <span className="text-accent">Draft</span>
+        Lane<span className="text-accent">split</span>
       </Link>
       <div className="w-full max-w-sm">{children}</div>
     </div>

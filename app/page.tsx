@@ -26,7 +26,7 @@ export default function Home() {
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="text-lg font-semibold tracking-tight">
-            Rift <span className="text-accent">Draft</span>
+            Lane<span className="text-accent">split</span>
           </span>
           <nav className="flex items-center gap-3">
             <Link href="/login">
@@ -48,7 +48,7 @@ export default function Home() {
               Fantasy League of Legends
             </p>
             <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Draft your Rift, week after week.
+              Draft your lane, week after week.
             </h1>
             <p className="mt-5 text-lg text-muted text-pretty">
               Create a league, invite your friends, and run a live snake draft of

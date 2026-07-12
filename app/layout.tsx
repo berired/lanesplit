@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Rift Draft",
-    template: "%s · Rift Draft",
+    default: "Lanesplit",
+    template: "%s · Lanesplit",
   },
   description: "Fantasy draft for League of Legends, played with friends.",
 };
