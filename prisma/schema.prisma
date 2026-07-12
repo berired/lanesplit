@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GameMode {
+  PRO_PLAYER
+  CHAMPION
+}
+
+enum LeagueRole {
+  COMMISSIONER
+  MEMBER
+}
+
+enum DraftStatus {
+  PENDING
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+}
+
+enum MatchupStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships         LeagueMembership[]
+  commissionedLeagues League[]           @relation("LeagueCommissioner")
+  draftPicks          DraftPick[]        @relation("DraftPickMadeBy")
+}
+
+model League {
+  id             String   @id @default(cuid())
+  name           String
+  gameMode       GameMode
+  inviteCode     String   @unique
+  commissionerId String
+  maxTeams       Int      @default(10)
+  rosterSize     Int      @default(8)
+  createdAt      DateTime @default(now())
+
+  commissioner User               @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
+  memberships  LeagueMembership[]
+  scoringRules ScoringRule[]
+  draft        Draft?
+  weeks        SeasonWeek[]
+  matchups     Matchup[]
+
+  @@index([commissionerId])
+}
+
+model LeagueMembership {
+  id       String     @id @default(cuid())
+  leagueId String
+  userId   String
+  role     LeagueRole @default(MEMBER)
+  teamName String
+  joinedAt DateTime   @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  rosterEntries RosterEntry[]
+  draftPicks    DraftPick[]   @relation("DraftPickOwner")
+  homeMatchups  Matchup[]     @relation("HomeTeam")
+  awayMatchups  Matchup[]     @relation("AwayTeam")
+
+  @@unique([leagueId, userId])
+  @@index([userId])
+}
+
+model ProPlayer {
+  id            String  @id @default(cuid())
+  name          String
+  team          String
+  role          String
+  league        String
+  externalRefId String? @unique
+
+  draftable Draftable?
+}
+
+model Champion {
+  id          String @id @default(cuid())
+  name        String @unique
+  riotKey     String @unique
+  primaryRole String
+
+  draftable Draftable?
+}
+
+model Draftable {
+  id          String   @id @default(cuid())
+  gameMode    GameMode
+  proPlayerId String?  @unique
+  championId  String?  @unique
+
+  proPlayer ProPlayer? @relation(fields: [proPlayerId], references: [id])
+  champion  Champion?  @relation(fields: [championId], references: [id])
+
+  draftPicks    DraftPick[]
+  rosterEntries RosterEntry[]
+  rawStats      RawStatEntry[]
+
+  @@index([gameMode])
+}
+
+model Draft {
+  id               String      @id @default(cuid())
+  leagueId         String      @unique
+  status           DraftStatus @default(PENDING)
+  currentRound     Int         @default(1)
+  currentPickIndex Int         @default(0)
+  turnStartedAt    DateTime?
+  turnDurationSec  Int         @default(60)
+  version          Int         @default(0)
+  draftOrder       Json
+
+  league League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  picks  DraftPick[]
+}
+
+model DraftPick {
+  id           String   @id @default(cuid())
+  draftId      String
+  round        Int
+  pickNumber   Int
+  membershipId String
+  draftableId  String
+  madeByUserId String
+  pickedAt     DateTime @default(now())
+
+  draft      Draft            @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  membership LeagueMembership @relation("DraftPickOwner", fields: [membershipId], references: [id])
+  draftable  Draftable        @relation(fields: [draftableId], references: [id])
+  madeBy     User             @relation("DraftPickMadeBy", fields: [madeByUserId], references: [id])
+
+  @@unique([draftId, pickNumber])
+  @@unique([draftId, draftableId])
+  @@index([membershipId])
+}
+
+model RosterEntry {
+  id           String   @id @default(cuid())
+  membershipId String
+  draftableId  String
+  acquiredAt   DateTime @default(now())
+  isStarter    Boolean  @default(true)
+
+  membership LeagueMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  draftable  Draftable        @relation(fields: [draftableId], references: [id])
+
+  weeklyScores WeeklyScore[]
+
+  @@unique([membershipId, draftableId])
+}
+
+model SeasonWeek {
+  id         String   @id @default(cuid())
+  leagueId   String
+  weekNumber Int
+  startsAt   DateTime
+  endsAt     DateTime
+
+  league       League        @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  matchups     Matchup[]
+  weeklyScores WeeklyScore[]
+
+  @@unique([leagueId, weekNumber])
+}
+
+model Matchup {
+  id               String        @id @default(cuid())
+  leagueId         String
+  weekId           String
+  homeMembershipId String
+  awayMembershipId String
+  homeScore        Float?
+  awayScore        Float?
+  status           MatchupStatus @default(SCHEDULED)
+
+  league         League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  week           SeasonWeek       @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  homeMembership LeagueMembership @relation("HomeTeam", fields: [homeMembershipId], references: [id])
+  awayMembership LeagueMembership @relation("AwayTeam", fields: [awayMembershipId], references: [id])
+
+  @@index([weekId])
+}
+
+model StatsImportJob {
+  id           String    @id @default(cuid())
+  source       String
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  status       String
+  errorMessage String?
+  rowsImported Int?
+}
+
+model RawStatEntry {
+  id             String   @id @default(cuid())
+  draftableId    String
+  source         String
+  externalGameId String
+  gameDate       DateTime
+  kills          Int      @default(0)
+  deaths         Int      @default(0)
+  assists        Int      @default(0)
+  cs             Int      @default(0)
+  visionScore    Int      @default(0)
+  win            Boolean
+  rawJson        Json
+
+  draftable Draftable @relation(fields: [draftableId], references: [id])
+
+  @@unique([source, externalGameId, draftableId])
+  @@index([draftableId, gameDate])
+}
+
+model ScoringRule {
+  id            String @id @default(cuid())
+  leagueId      String
+  statKey       String
+  pointsPerUnit Float
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, statKey])
+}
+
+model WeeklyScore {
+  id            String @id @default(cuid())
+  rosterEntryId String
+  weekId        String
+  points        Float
+
+  rosterEntry RosterEntry @relation(fields: [rosterEntryId], references: [id], onDelete: Cascade)
+  week        SeasonWeek  @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@unique([rosterEntryId, weekId])
+}
