@@ -17,6 +17,7 @@ export async function signup(
     displayName: formData.get("displayName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
   });
 
   if (!validated.success) {
@@ -25,20 +26,72 @@ export async function signup(
 
   const { displayName, email, password } = validated.data;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
+  const [existingEmail, existingName] = await Promise.all([
+    prisma.user.findUnique({ where: { email } }),
+    prisma.user.findUnique({ where: { displayName } }),
+  ]);
+  if (existingEmail) {
     return actionFieldErrors({ email: ["An account with this email already exists."] });
+  }
+  if (existingName) {
+    return actionFieldErrors({ displayName: ["That display name is already taken."] });
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const user = await prisma.user.create({
-    data: { displayName, email, passwordHash },
-    select: { id: true },
-  });
+  let user: { id: string };
+  try {
+    user = await prisma.user.create({
+      data: { displayName, email, passwordHash },
+      select: { id: true },
+    });
+  } catch (error) {
+    // Backstop for a race between the pre-checks above and the insert (e.g. two
+    // people signing up with the same name/email at the same instant).
+    if (isUniqueConstraintError(error, "email")) {
+      return actionFieldErrors({ email: ["An account with this email already exists."] });
+    }
+    if (isUniqueConstraintError(error, "displayName")) {
+      return actionFieldErrors({ displayName: ["That display name is already taken."] });
+    }
+    throw error;
+  }
 
   await createSession(user.id);
   redirect("/dashboard");
+}
+
+/**
+ * Live availability checks called directly from the signup form as the user
+ * types (debounced client-side). Kept separate from `signup` itself, which is
+ * the actual source of truth — these are just fast, cheap UX hints.
+ */
+export async function checkEmailAvailability(email: string): Promise<{ available: boolean }> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return { available: true };
+  const existing = await prisma.user.findUnique({ where: { email: normalized } });
+  return { available: !existing };
+}
+
+export async function checkDisplayNameAvailability(
+  displayName: string
+): Promise<{ available: boolean }> {
+  const normalized = displayName.trim();
+  if (!normalized) return { available: true };
+  const existing = await prisma.user.findUnique({ where: { displayName: normalized } });
+  return { available: !existing };
+}
+
+function isUniqueConstraintError(error: unknown, field: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002" &&
+    "meta" in error &&
+    Array.isArray((error as { meta?: { target?: unknown } }).meta?.target) &&
+    ((error as { meta: { target: unknown[] } }).meta.target as unknown[]).includes(field)
+  );
 }
 
 export async function login(

@@ -5,6 +5,7 @@ import { login } from "@/lib/actions/auth";
 import { LoginSchema } from "@/lib/validation/auth.schema";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { actionFieldErrors, type ActionResult } from "@/lib/validation/action-result";
 
 async function loginWithClientValidation(
@@ -33,10 +34,9 @@ export function LoginForm() {
       </div>
       <div>
         <Label htmlFor="password">Password</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
         />
