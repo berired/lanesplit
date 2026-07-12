@@ -21,5 +21,5 @@ export default function DashboardLayout({
 async function AuthedNavBar() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  return <NavBar displayName={user.displayName} />;
+  return <NavBar displayName={user.displayName} isAdmin={user.isAdmin} />;
 }

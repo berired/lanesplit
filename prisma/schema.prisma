@@ -38,6 +38,7 @@ model User {
   email        String   @unique
   passwordHash String
   displayName  String   @unique
+  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -150,7 +151,7 @@ model DraftPick {
   pickedAt     DateTime @default(now())
 
   draft      Draft            @relation(fields: [draftId], references: [id], onDelete: Cascade)
-  membership LeagueMembership @relation("DraftPickOwner", fields: [membershipId], references: [id])
+  membership LeagueMembership @relation("DraftPickOwner", fields: [membershipId], references: [id], onDelete: Cascade)
   draftable  Draftable        @relation(fields: [draftableId], references: [id])
   madeBy     User             @relation("DraftPickMadeBy", fields: [madeByUserId], references: [id])
 
@@ -200,8 +201,8 @@ model Matchup {
 
   league         League           @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   week           SeasonWeek       @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  homeMembership LeagueMembership @relation("HomeTeam", fields: [homeMembershipId], references: [id])
-  awayMembership LeagueMembership @relation("AwayTeam", fields: [awayMembershipId], references: [id])
+  homeMembership LeagueMembership @relation("HomeTeam", fields: [homeMembershipId], references: [id], onDelete: Cascade)
+  awayMembership LeagueMembership @relation("AwayTeam", fields: [awayMembershipId], references: [id], onDelete: Cascade)
 
   @@index([weekId])
 }

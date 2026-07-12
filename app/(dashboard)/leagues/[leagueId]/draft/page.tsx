@@ -7,6 +7,7 @@ import { getDraftSnapshot } from "@/lib/draft/service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StartDraftButton } from "./start-draft-button";
 import { DraftRoom } from "./draft-room";
+import { DraftLobbyWait } from "./draft-lobby-wait";
 
 export default async function DraftPage({
   params,
@@ -33,12 +34,13 @@ export default async function DraftPage({
   if (!draft || draft.status === DraftStatus.PENDING) {
     return (
       <Card>
+        <DraftLobbyWait leagueId={leagueId} />
         <CardHeader>
           <CardTitle>Draft hasn&apos;t started yet</CardTitle>
           <CardDescription>
             {isCommissioner
               ? "Kick off the live snake draft whenever your league is ready."
-              : "Waiting for the commissioner to start the draft."}
+              : "Waiting for the commissioner to start the draft. You'll be taken to the draft room automatically."}
           </CardDescription>
         </CardHeader>
         {isCommissioner && (

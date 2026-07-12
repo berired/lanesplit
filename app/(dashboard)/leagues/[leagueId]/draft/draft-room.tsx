@@ -54,6 +54,7 @@ export function DraftRoom({
   const [now, setNow] = useState(() => Date.now());
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null); // draftableId being submitted
+  const [confirmTarget, setConfirmTarget] = useState<DraftablePoolEntry | null>(null);
   const stateVersionRef = useRef(initialState.version);
 
   const [searchInput, setSearchInput] = useState("");
@@ -107,6 +108,17 @@ export function DraftRoom({
     };
   }, [leagueId, state.status]);
 
+  // If the turn moves on (timer expired) or the pick gets taken while the confirm
+  // modal is open, dismiss it rather than let the user confirm a stale pick.
+  useEffect(() => {
+    if (!confirmTarget) return;
+    const stillOnClock = state.onClockMembershipId === viewerMembershipId;
+    const alreadyTaken = state.takenDraftableIds.includes(confirmTarget.draftableId);
+    if (!stillOnClock || alreadyTaken) {
+      setConfirmTarget(null);
+    }
+  }, [state, viewerMembershipId, confirmTarget]);
+
   const handlePick = useCallback(
     async (draftableId: string) => {
       setMessage(null);
@@ -136,6 +148,13 @@ export function DraftRoom({
     },
     [leagueId, viewerMembershipId]
   );
+
+  const handleConfirmPick = useCallback(() => {
+    if (!confirmTarget) return;
+    const draftableId = confirmTarget.draftableId;
+    setConfirmTarget(null);
+    void handlePick(draftableId);
+  }, [confirmTarget, handlePick]);
 
   const poolByDraftableId = useMemo(
     () => new Map(pool.map((p) => [p.draftableId, p])),
@@ -203,6 +222,7 @@ export function DraftRoom({
     : null;
 
   return (
+    <>
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <Card>
@@ -357,7 +377,7 @@ export function DraftRoom({
                             ? `You can't afford this — ${formatUsd(viewerRemaining)} remaining`
                             : undefined
                         }
-                        onClick={() => handlePick(entry.draftableId)}
+                        onClick={() => setConfirmTarget(entry)}
                         className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left text-sm transition-colors enabled:hover:bg-border/30 disabled:opacity-50"
                       >
                         <span className="min-w-0 truncate">
@@ -441,5 +461,41 @@ export function DraftRoom({
         </Card>
       </div>
     </div>
+
+    {confirmTarget && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>Lock in this pick?</CardTitle>
+            <CardDescription>You won&apos;t be able to change it once confirmed.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-raised px-3 py-2">
+              <span className="min-w-0 truncate">
+                <span className="font-medium">{confirmTarget.name}</span>
+                {confirmTarget.team && <span className="text-muted"> · {confirmTarget.team}</span>}
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                <Badge tone="gold">{formatCompactUsd(confirmTarget.cost)}</Badge>
+                <Badge tone="neutral">{confirmTarget.role}</Badge>
+              </span>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setConfirmTarget(null)}
+              >
+                No, keep looking
+              </Button>
+              <Button type="button" onClick={handleConfirmPick}>
+                Yes, lock it in
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
+    </>
   );
 }

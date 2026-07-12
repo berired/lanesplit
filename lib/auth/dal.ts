@@ -27,8 +27,25 @@ export const getCurrentUser = cache(async () => {
 
   return prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, email: true, displayName: true },
+    select: { id: true, email: true, displayName: true, isAdmin: true },
   });
+});
+
+/**
+ * Site-wide admin check (distinct from per-league COMMISSIONER role). Redirects
+ * non-admins to the dashboard rather than notFound() — the admin section's
+ * existence isn't a secret, just gated.
+ */
+export const requireAdmin = cache(async () => {
+  const { userId } = await requireUser();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user?.isAdmin) redirect("/dashboard");
+  return { userId };
 });
 
 /**

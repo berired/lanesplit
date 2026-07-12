@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/leagues"];
+const PROTECTED_PREFIXES = ["/dashboard", "/leagues", "/admin"];
 const AUTH_ROUTES = ["/login", "/signup"];
 
 /**

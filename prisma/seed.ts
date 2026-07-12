@@ -5,10 +5,14 @@
  *
  * Run via `npx prisma db seed` (wired up in prisma.config.ts).
  */
+import bcrypt from "bcryptjs";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { GameMode } from "../lib/generated/prisma/enums";
 import { baseCostForRole } from "../lib/draftables/pricing";
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@lanesplit.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "password";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -225,7 +229,24 @@ function proPlayerCost(name: string, role: string): number {
   return isNamedStar ? Math.round((base * 1.6) / 100_000) * 100_000 : base;
 }
 
+async function seedAdmin() {
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  await prisma.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    create: {
+      email: ADMIN_EMAIL,
+      displayName: "Admin",
+      passwordHash,
+      isAdmin: true,
+    },
+    update: { isAdmin: true },
+  });
+  console.log(`Seeded admin account (${ADMIN_EMAIL}).`);
+}
+
 async function main() {
+  await seedAdmin();
+
   console.log(`Seeding ${CHAMPIONS.length} champions…`);
   for (const champion of CHAMPIONS) {
     const row = await prisma.champion.upsert({

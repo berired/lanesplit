@@ -2,7 +2,13 @@ import Link from "next/link";
 import { logout } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 
-export function NavBar({ displayName }: { displayName: string }) {
+export function NavBar({
+  displayName,
+  isAdmin,
+}: {
+  displayName: string;
+  isAdmin?: boolean;
+}) {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
@@ -13,6 +19,11 @@ export function NavBar({ displayName }: { displayName: string }) {
           <Link href="/how-to-play" className="text-sm text-muted hover:text-foreground">
             How to play
           </Link>
+          {isAdmin && (
+            <Link href="/admin" className="text-sm text-muted hover:text-foreground">
+              Admin
+            </Link>
+          )}
           <span className="hidden text-sm text-muted sm:inline">{displayName}</span>
           <form action={logout}>
             <Button type="submit" variant="secondary" size="sm">
