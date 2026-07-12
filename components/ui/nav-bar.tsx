@@ -10,6 +10,9 @@ export function NavBar({ displayName }: { displayName: string }) {
           Lane<span className="text-accent">split</span>
         </Link>
         <div className="flex items-center gap-4">
+          <Link href="/how-to-play" className="text-sm text-muted hover:text-foreground">
+            How to play
+          </Link>
           <span className="hidden text-sm text-muted sm:inline">{displayName}</span>
           <form action={logout}>
             <Button type="submit" variant="secondary" size="sm">

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PublicHeader } from "@/components/ui/public-header";
+import { PublicFooter } from "@/components/ui/public-footer";
 
 const FEATURES = [
   {
@@ -23,23 +25,7 @@ const FEATURES = [
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="text-lg font-semibold tracking-tight">
-            Lane<span className="text-accent">split</span>
-          </span>
-          <nav className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Log in
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Create account</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-6 py-24">
@@ -85,11 +71,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-6 text-sm text-muted">
-          Not affiliated with Riot Games. Built for friends who argue about draft picks.
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
