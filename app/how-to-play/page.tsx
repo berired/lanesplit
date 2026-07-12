@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { PublicHeader } from "@/components/ui/public-header";
 import { NavBar } from "@/components/ui/nav-bar";
@@ -7,6 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/dal";
+
+async function AuthAwareHeader() {
+  const user = await getCurrentUser();
+  return user ? (
+    <NavBar displayName={user.displayName} isAdmin={user.isAdmin} />
+  ) : (
+    <PublicHeader />
+  );
+}
 
 export const metadata: Metadata = { title: "How to play" };
 
@@ -74,16 +84,12 @@ const GAME_MODES = [
   },
 ];
 
-export default async function HowToPlayPage() {
-  const user = await getCurrentUser();
-
+export default function HowToPlayPage() {
   return (
     <div className="flex flex-1 flex-col">
-      {user ? (
-        <NavBar displayName={user.displayName} isAdmin={user.isAdmin} />
-      ) : (
-        <PublicHeader />
-      )}
+      <Suspense fallback={<PublicHeader />}>
+        <AuthAwareHeader />
+      </Suspense>
 
       <main className="flex-1">
         <section className="mx-auto max-w-4xl px-6 py-16">

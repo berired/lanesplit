@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { requireAdmin } from "@/lib/auth/dal";
 import { prisma } from "@/lib/db/prisma";
 import { DraftStatus, GameMode } from "@/lib/generated/prisma/enums";
@@ -5,7 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { DRAFT_STATUS_LABEL } from "@/lib/draft/labels";
 
-export default async function AdminPage() {
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<AdminPageSkeleton />}>
+      <AdminOverview />
+    </Suspense>
+  );
+}
+
+function AdminPageSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+        <p className="mt-1 text-sm text-muted">Site-wide overview of users and leagues.</p>
+      </div>
+    </div>
+  );
+}
+
+async function AdminOverview() {
   await requireAdmin();
 
   const [totalUsers, leagues, users] = await Promise.all([
