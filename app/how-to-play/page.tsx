@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader } from "@/components/ui/public-header";
+import { NavBar } from "@/components/ui/nav-bar";
 import { PublicFooter } from "@/components/ui/public-footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getCurrentUser } from "@/lib/auth/dal";
 
 export const metadata: Metadata = { title: "How to play" };
 
@@ -72,10 +74,16 @@ const GAME_MODES = [
   },
 ];
 
-export default function HowToPlayPage() {
+export default async function HowToPlayPage() {
+  const user = await getCurrentUser();
+
   return (
     <div className="flex flex-1 flex-col">
-      <PublicHeader />
+      {user ? (
+        <NavBar displayName={user.displayName} isAdmin={user.isAdmin} />
+      ) : (
+        <PublicHeader />
+      )}
 
       <main className="flex-1">
         <section className="mx-auto max-w-4xl px-6 py-16">
