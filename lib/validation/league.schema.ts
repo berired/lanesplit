@@ -20,12 +20,12 @@ export const CreateLeagueSchema = z.object({
     .min(2, "A league needs at least 2 teams.")
     .max(20, "A league can have at most 20 teams.")
     .default(10),
-  rosterSize: z.coerce
+  startingBudget: z.coerce
     .number()
-    .int("Roster size must be a whole number.")
-    .min(1, "Roster size must be at least 1.")
-    .max(15, "Roster size can be at most 15.")
-    .default(8),
+    .int("Starting budget must be a whole number.")
+    .min(1_000_000, "Starting budget must be at least $1,000,000.")
+    .max(1_000_000_000, "Starting budget can be at most $1,000,000,000.")
+    .default(10_000_000),
 });
 
 export const JoinLeagueSchema = z.object({

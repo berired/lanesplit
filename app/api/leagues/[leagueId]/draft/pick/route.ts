@@ -17,8 +17,15 @@ import {
   getOverallPickNumber,
   isDraftComplete,
 } from "@/lib/draft/engine";
-import { autoSkipExpiredTurns, parseDraftOrder } from "@/lib/draft/service";
+import {
+  autoSkipExpiredTurns,
+  getFilledRoles,
+  getSpentBudgetByMembership,
+  parseDraftOrder,
+} from "@/lib/draft/service";
+import { ROSTER_SIZE } from "@/lib/draft/roles";
 import { ensureSeasonScheduled } from "@/lib/leagues/start-season";
+import { formatUsd } from "@/lib/format/currency";
 
 type PickBody = {
   membershipId?: unknown;
@@ -68,7 +75,7 @@ export async function POST(
     // Resolve any turns that have already timed out before evaluating this pick. If
     // this causes the turn to move, the caller's request is now stale — tell them to
     // re-poll rather than let them pick against an out-of-date turn.
-    const resolvedDraft = await autoSkipExpiredTurns(leagueId, draft, teamCount, league.rosterSize);
+    const resolvedDraft = await autoSkipExpiredTurns(leagueId, draft, teamCount);
     if (resolvedDraft.version !== draft.version) {
       throw new ConflictError("Your turn timed out — refreshing…");
     }
@@ -87,7 +94,10 @@ export async function POST(
       throw new NotYourTurnError();
     }
 
-    const draftable = await prisma.draftable.findUnique({ where: { id: draftableId } });
+    const draftable = await prisma.draftable.findUnique({
+      where: { id: draftableId },
+      include: { proPlayer: { select: { role: true } }, champion: { select: { primaryRole: true } } },
+    });
     if (!draftable || draftable.gameMode !== league.gameMode) {
       throw new ConflictError("That pick isn't valid for this league.");
     }
@@ -99,13 +109,33 @@ export async function POST(
       throw new ConflictError("That pick has already been taken.");
     }
 
+    // A roster mirrors a real match: exactly one pick per role. Reject a pick that
+    // would give this team a second Top/Jungle/Mid/ADC/Support.
+    const pickRole = draftable.proPlayer?.role ?? draftable.champion?.primaryRole ?? null;
+    if (pickRole) {
+      const filledRoles = await getFilledRoles(membershipId);
+      if (filledRoles.includes(pickRole)) {
+        throw new ConflictError(`Your roster already has a ${pickRole} pick.`);
+      }
+    }
+
+    // Salary cap: reject a pick the team can't afford with their remaining budget.
+    const spentByMembership = await getSpentBudgetByMembership(leagueId);
+    const spent = spentByMembership[membershipId] ?? 0;
+    const remaining = league.startingBudget - spent;
+    if (draftable.cost > remaining) {
+      throw new ConflictError(
+        `You can't afford that pick — ${formatUsd(remaining)} remaining, this costs ${formatUsd(draftable.cost)}.`
+      );
+    }
+
     const pickNumber = getOverallPickNumber(draftOrder, draft.currentRound, draft.currentPickIndex);
     const next = getNextPosition({
       round: draft.currentRound,
       currentPickIndex: draft.currentPickIndex,
       teamCount,
     });
-    const complete = isDraftComplete({ round: next.round, teamCount, rosterSize: league.rosterSize });
+    const complete = isDraftComplete({ round: next.round, teamCount, rosterSize: ROSTER_SIZE });
     const now = new Date();
 
     await prisma.$transaction(async (tx) => {

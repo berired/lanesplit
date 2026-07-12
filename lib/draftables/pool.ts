@@ -10,6 +10,8 @@ export type DraftablePoolEntry = {
   role: string;
   team: string | null;
   league: string | null;
+  /** Salary-cap draft cost in whole USD. */
+  cost: number;
 };
 
 /**
@@ -39,6 +41,7 @@ export async function getDraftablePool(gameMode: GameMode): Promise<DraftablePoo
           role: d.proPlayer.role,
           team: d.proPlayer.team,
           league: d.proPlayer.league,
+          cost: d.cost,
         };
       }
       if (d.champion) {
@@ -49,6 +52,7 @@ export async function getDraftablePool(gameMode: GameMode): Promise<DraftablePoo
           role: d.champion.primaryRole,
           team: null,
           league: null,
+          cost: d.cost,
         };
       }
       return null;

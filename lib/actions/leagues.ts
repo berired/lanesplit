@@ -34,14 +34,14 @@ export async function createLeague(
     teamName: formData.get("teamName"),
     gameMode: formData.get("gameMode"),
     maxTeams: formData.get("maxTeams"),
-    rosterSize: formData.get("rosterSize"),
+    startingBudget: formData.get("startingBudget"),
   });
 
   if (!validated.success) {
     return actionFieldErrors(validated.error.flatten().fieldErrors);
   }
 
-  const { name, teamName, gameMode, maxTeams, rosterSize } = validated.data;
+  const { name, teamName, gameMode, maxTeams, startingBudget } = validated.data;
   const { userId } = await requireUser();
 
   let leagueId: string | null = null;
@@ -58,7 +58,10 @@ export async function createLeague(
             inviteCode,
             commissionerId: userId,
             maxTeams,
-            rosterSize,
+            startingBudget,
+            // rosterSize is not user-configurable — a roster is always exactly
+            // Top/Jungle/Mid/ADC/Support (see lib/draft/roles.ts's ROSTER_SIZE),
+            // so this just takes the schema default.
           },
           select: { id: true },
         });
@@ -200,4 +203,15 @@ export async function updateScoringRules(
   );
 
   return { success: true, data: null };
+}
+
+/**
+ * Permanently deletes a league and everything under it (memberships, draft,
+ * picks, rosters, schedule, scoring rules) via schema cascade deletes.
+ * Commissioner-only, irreversible — the confirm step lives in the UI.
+ */
+export async function deleteLeague(leagueId: string): Promise<void> {
+  await requireCommissioner(leagueId);
+  await prisma.league.delete({ where: { id: leagueId } });
+  redirect("/dashboard");
 }

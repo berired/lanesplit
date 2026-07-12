@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import type { NormalizedStatRow } from "@/lib/stats/providers/stats-provider";
-import { normalizeChampionKey } from "@/lib/stats/providers/oracles-elixir-provider";
+import { normalizeChampionKey } from "@/lib/stats/normalize-champion-key";
 
 export interface IngestResult {
   imported: number;
@@ -60,7 +60,7 @@ async function resolveDraftableIds(externalKeys: string[]): Promise<Map<string, 
  */
 export async function ingestNormalizedRows(
   rows: NormalizedStatRow[],
-  source: "RIOT" | "ORACLES_ELIXIR"
+  source: "RIOT"
 ): Promise<IngestResult> {
   const job = await prisma.statsImportJob.create({
     data: { source, status: "RUNNING" },

@@ -8,6 +8,8 @@ const SORT_OPTIONS = [
   { value: "name-asc", label: "Name (A–Z)" },
   { value: "name-desc", label: "Name (Z–A)" },
   { value: "role-asc", label: "Role (A–Z)" },
+  { value: "cost-asc", label: "Cost (low to high)" },
+  { value: "cost-desc", label: "Cost (high to low)" },
 ] as const;
 
 export function PlayerFilters({

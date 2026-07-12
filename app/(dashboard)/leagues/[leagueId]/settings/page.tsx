@@ -1,9 +1,15 @@
 import { notFound } from "next/navigation";
 import { requireCommissioner } from "@/lib/auth/dal";
 import { prisma } from "@/lib/db/prisma";
+import { GameMode } from "@/lib/generated/prisma/enums";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScoringRulesForm } from "./scoring-rules-form";
-import { StatsImportForm } from "./stats-import-form";
+import { SyncChampionsButton } from "./sync-champions-button";
+import { SyncProPlayersButton } from "./sync-pro-players-button";
+import { SyncMatchStatsButton } from "./sync-match-stats-button";
+import { DeleteLeagueButton } from "./delete-league-button";
+import { ROLES } from "@/lib/draft/roles";
+import { formatUsd } from "@/lib/format/currency";
 
 export default async function LeagueSettingsPage({
   params,
@@ -46,7 +52,11 @@ export default async function LeagueSettingsPage({
           </div>
           <div>
             <p className="text-muted">Roster size</p>
-            <p className="font-medium">{league.rosterSize}</p>
+            <p className="font-medium">{ROLES.length} ({ROLES.join(" / ")})</p>
+          </div>
+          <div>
+            <p className="text-muted">Starting budget per team</p>
+            <p className="font-medium">{formatUsd(league.startingBudget)}</p>
           </div>
         </CardContent>
       </Card>
@@ -64,7 +74,15 @@ export default async function LeagueSettingsPage({
         </CardContent>
       </Card>
 
-      <StatsImportForm leagueId={leagueId} />
+      {league.gameMode === GameMode.CHAMPION && (
+        <>
+          <SyncChampionsButton leagueId={leagueId} />
+          <SyncMatchStatsButton leagueId={leagueId} />
+        </>
+      )}
+      {league.gameMode === GameMode.PRO_PLAYER && <SyncProPlayersButton leagueId={leagueId} />}
+
+      <DeleteLeagueButton leagueId={leagueId} leagueName={league.name} />
     </div>
   );
 }

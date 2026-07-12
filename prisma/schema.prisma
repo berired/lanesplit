@@ -53,7 +53,8 @@ model League {
   inviteCode     String   @unique
   commissionerId String
   maxTeams       Int      @default(10)
-  rosterSize     Int      @default(8)
+  rosterSize     Int      @default(5)
+  startingBudget Int      @default(10000000)
   createdAt      DateTime @default(now())
 
   commissioner User               @relation("LeagueCommissioner", fields: [commissionerId], references: [id])
@@ -111,6 +112,7 @@ model Draftable {
   gameMode    GameMode
   proPlayerId String?  @unique
   championId  String?  @unique
+  cost        Int      @default(1000000)
 
   proPlayer ProPlayer? @relation(fields: [proPlayerId], references: [id])
   champion  Champion?  @relation(fields: [championId], references: [id])

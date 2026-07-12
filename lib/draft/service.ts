@@ -9,6 +9,7 @@ import {
   isDraftComplete,
 } from "@/lib/draft/engine";
 import { ensureSeasonScheduled } from "@/lib/leagues/start-season";
+import { ROSTER_SIZE } from "@/lib/draft/roles";
 import type { Draft } from "@/lib/generated/prisma/client";
 
 /** Draft.draftOrder is stored as Json; it's always a flat array of membershipId strings. */
@@ -39,15 +40,14 @@ function isTurnExpired(draft: Draft, now: Date): boolean {
 export async function autoSkipExpiredTurns(
   leagueId: string,
   draft: Draft,
-  teamCount: number,
-  rosterSize: number
+  teamCount: number
 ): Promise<Draft> {
   let current = draft;
   const now = new Date();
 
   // Bound the loop by the number of remaining picks so a pathological state can
   // never spin forever.
-  let guard = teamCount * rosterSize + 1;
+  let guard = teamCount * ROSTER_SIZE + 1;
 
   while (guard-- > 0 && isTurnExpired(current, now)) {
     const next = getNextPosition({
@@ -55,7 +55,7 @@ export async function autoSkipExpiredTurns(
       currentPickIndex: current.currentPickIndex,
       teamCount,
     });
-    const complete = isDraftComplete({ round: next.round, teamCount, rosterSize });
+    const complete = isDraftComplete({ round: next.round, teamCount, rosterSize: ROSTER_SIZE });
 
     const result = await prisma.draft.updateMany({
       where: { id: current.id, version: current.version },
@@ -105,6 +105,8 @@ export type DraftStateView = {
   turnDeadline: string | null;
   picks: DraftPickView[];
   takenDraftableIds: string[];
+  startingBudget: number;
+  spentByMembership: Record<string, number>;
 };
 
 function draftableDisplayName(draftable: {
@@ -120,19 +122,26 @@ function draftableDisplayName(draftable: {
  * share. Safe to call from a Server Component during render since it never writes.
  */
 export async function getDraftSnapshot(leagueId: string): Promise<DraftStateView> {
-  const draft = await prisma.draft.findUnique({ where: { leagueId } });
+  const [draft, league] = await Promise.all([
+    prisma.draft.findUnique({ where: { leagueId } }),
+    prisma.league.findUnique({ where: { id: leagueId }, select: { startingBudget: true } }),
+  ]);
   if (!draft) throw new NotFoundError("Draft has not been started yet.");
+  if (!league) throw new NotFoundError("League not found.");
 
   const draftOrder = parseDraftOrder(draft.draftOrder);
   const teamCount = draftOrder.length;
 
-  const picks = await prisma.draftPick.findMany({
-    where: { draftId: draft.id },
-    orderBy: { pickNumber: "asc" },
-    include: {
-      draftable: { include: { proPlayer: true, champion: true } },
-    },
-  });
+  const [picks, spentByMembership] = await Promise.all([
+    prisma.draftPick.findMany({
+      where: { draftId: draft.id },
+      orderBy: { pickNumber: "asc" },
+      include: {
+        draftable: { include: { proPlayer: true, champion: true } },
+      },
+    }),
+    getSpentBudgetByMembership(leagueId),
+  ]);
 
   const onClockMembershipId =
     draft.status === DraftStatus.IN_PROGRESS && teamCount > 0
@@ -158,6 +167,8 @@ export async function getDraftSnapshot(leagueId: string): Promise<DraftStateView
       draftableName: draftableDisplayName(p.draftable),
     })),
     takenDraftableIds: picks.map((p) => p.draftableId),
+    startingBudget: league.startingBudget,
+    spentByMembership,
   };
 }
 
@@ -168,9 +179,6 @@ export async function getDraftSnapshot(leagueId: string): Promise<DraftStateView
  * expired turns) are appropriate.
  */
 export async function getFreshDraftState(leagueId: string): Promise<DraftStateView> {
-  const league = await prisma.league.findUnique({ where: { id: leagueId } });
-  if (!league) throw new NotFoundError("League not found.");
-
   const draft = await prisma.draft.findUnique({ where: { leagueId } });
   if (!draft) throw new NotFoundError("Draft has not been started yet.");
 
@@ -178,8 +186,48 @@ export async function getFreshDraftState(leagueId: string): Promise<DraftStateVi
   const teamCount = draftOrder.length;
 
   if (draft.status === DraftStatus.IN_PROGRESS && teamCount > 0) {
-    await autoSkipExpiredTurns(leagueId, draft, teamCount, league.rosterSize);
+    await autoSkipExpiredTurns(leagueId, draft, teamCount);
   }
 
   return getDraftSnapshot(leagueId);
+}
+
+/**
+ * Roles a membership's current roster already fills (Top/Jungle/Mid/ADC/Support),
+ * derived from whichever pool (ProPlayer or Champion) each RosterEntry's Draftable
+ * belongs to — works regardless of the league's game mode.
+ */
+export async function getFilledRoles(membershipId: string): Promise<string[]> {
+  const entries = await prisma.rosterEntry.findMany({
+    where: { membershipId },
+    select: {
+      draftable: {
+        select: {
+          proPlayer: { select: { role: true } },
+          champion: { select: { primaryRole: true } },
+        },
+      },
+    },
+  });
+
+  return entries
+    .map((e) => e.draftable.proPlayer?.role ?? e.draftable.champion?.primaryRole)
+    .filter((role): role is string => Boolean(role));
+}
+
+/**
+ * Total spent so far, per membership, across the whole league in one batched
+ * query — used to show every team's remaining budget, not just the viewer's.
+ */
+export async function getSpentBudgetByMembership(leagueId: string): Promise<Record<string, number>> {
+  const entries = await prisma.rosterEntry.findMany({
+    where: { membership: { leagueId } },
+    select: { membershipId: true, draftable: { select: { cost: true } } },
+  });
+
+  const spent: Record<string, number> = {};
+  for (const entry of entries) {
+    spent[entry.membershipId] = (spent[entry.membershipId] ?? 0) + entry.draftable.cost;
+  }
+  return spent;
 }

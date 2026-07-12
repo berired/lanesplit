@@ -14,7 +14,7 @@ const HOW_TO_STEPS = [
     steps: [
       "Sign up (or log in), then go to your dashboard and click “Create a league.”",
       "Give the league a name and pick your own team name.",
-      "Choose a game mode — Pro Players or Champions — and set the max number of teams and roster size.",
+      "Choose a game mode — Pro Players or Champions — and set the max number of teams and everyone's starting budget.",
       "You're the commissioner. Share the invite code shown on the league page with your friends.",
     ],
   },
@@ -36,9 +36,19 @@ const TUTORIAL_SECTIONS = [
       "A Lanesplit league runs in three phases: draft, season, and standings. Everyone in a league drafts a personal roster, that roster is scored automatically every week from real match data, and the league tracks head-to-head records all season — just like fantasy football, but for League of Legends.",
   },
   {
+    title: "Your roster: one pick per role",
+    description:
+      "Every roster mirrors a real match — exactly 5 spots: Top, Jungle, Mid, ADC, and Support. You can't draft two junglers or skip a role; once you've filled a role, the draft won't let you pick another player or champion for it. That also means the draft always runs exactly 5 rounds.",
+  },
+  {
     title: "The live snake draft",
     description:
-      "When the commissioner starts the draft, the app randomly sets a draft order and everyone takes turns picking. It's a snake draft: the order reverses each round (1st pick in round 1 picks last in round 2), so no single team gets every early pick. Each team gets a set amount of time per turn — if the clock runs out, that turn is skipped with no pick made, so keep an eye on it. Once every roster spot is filled, the draft ends and the season schedule is generated automatically.",
+      "When the commissioner starts the draft, the app randomly sets a draft order and everyone takes turns picking. It's a snake draft: the order reverses each round (1st pick in round 1 picks last in round 2), so no single team gets every early pick. Each team gets a set amount of time per turn — if the clock runs out, that turn is skipped with no pick made, so keep an eye on it. Once every team has filled all 5 roles, the draft ends and the season schedule is generated automatically.",
+  },
+  {
+    title: "Salary cap: every player has a price",
+    description:
+      "Every league starts with a budget (set by the commissioner when the league is created — the default is $10,000,000) that's the same for every team. Each player or champion costs a set amount to draft, and that cost comes straight out of your budget — star picks cost more, so you can't just draft the 5 best players and ignore the cap. Spend carefully: if you run low on budget, you may not be able to afford anyone left for a role you still need.",
   },
   {
     title: "Weekly matchups & scoring",

@@ -5,9 +5,10 @@ import { GameMode } from "@/lib/generated/prisma/enums";
 import { getDraftablePool, type DraftablePoolEntry } from "@/lib/draftables/pool";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatCompactUsd } from "@/lib/format/currency";
 import { PlayerFilters } from "./filters";
 
-type SortKey = "name-asc" | "name-desc" | "role-asc";
+type SortKey = "name-asc" | "name-desc" | "role-asc" | "cost-asc" | "cost-desc";
 
 function sortPool(pool: DraftablePoolEntry[], sort: SortKey): DraftablePoolEntry[] {
   const sorted = [...pool];
@@ -18,6 +19,10 @@ function sortPool(pool: DraftablePoolEntry[], sort: SortKey): DraftablePoolEntry
       return sorted.sort(
         (a, b) => a.role.localeCompare(b.role) || a.name.localeCompare(b.name)
       );
+    case "cost-asc":
+      return sorted.sort((a, b) => a.cost - b.cost);
+    case "cost-desc":
+      return sorted.sort((a, b) => b.cost - a.cost);
     case "name-asc":
     default:
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -59,7 +64,9 @@ export default async function PlayersPage({
   }
 
   const sortKey: SortKey =
-    sort === "name-desc" || sort === "role-asc" ? sort : "name-asc";
+    sort === "name-desc" || sort === "role-asc" || sort === "cost-asc" || sort === "cost-desc"
+      ? sort
+      : "name-asc";
   const results = sortPool(filtered, sortKey);
 
   const isProMode = league.gameMode === GameMode.PRO_PLAYER;
@@ -108,7 +115,10 @@ export default async function PlayersPage({
                     </p>
                   )}
                 </div>
-                <Badge tone="accent">{entry.role}</Badge>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Badge tone="gold">{formatCompactUsd(entry.cost)}</Badge>
+                  <Badge tone="accent">{entry.role}</Badge>
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -30,7 +30,7 @@ async function createLeagueWithClientValidation(
     teamName: formData.get("teamName"),
     gameMode: formData.get("gameMode"),
     maxTeams: formData.get("maxTeams"),
-    rosterSize: formData.get("rosterSize"),
+    startingBudget: formData.get("startingBudget"),
   });
   if (!validated.success) {
     return actionFieldErrors(validated.error.flatten().fieldErrors);
@@ -92,11 +92,25 @@ export function CreateLeagueForm() {
           <FieldError messages={fieldErrors?.maxTeams} />
         </div>
         <div>
-          <Label htmlFor="rosterSize">Roster size</Label>
-          <Input id="rosterSize" name="rosterSize" type="number" min={1} max={15} defaultValue={8} />
-          <FieldError messages={fieldErrors?.rosterSize} />
+          <Label htmlFor="startingBudget">Starting budget (USD)</Label>
+          <Input
+            id="startingBudget"
+            name="startingBudget"
+            type="number"
+            min={1_000_000}
+            max={1_000_000_000}
+            step={100_000}
+            defaultValue={10_000_000}
+          />
+          <FieldError messages={fieldErrors?.startingBudget} />
         </div>
       </div>
+
+      <p className="text-sm text-muted">
+        Rosters are fixed at 5 — one pick for each of Top, Jungle, Mid, ADC, and
+        Support, just like a real match. Every team gets the same starting budget
+        to spend across those 5 picks.
+      </p>
 
       {state && !state.success && state.formError && (
         <p className="text-sm text-danger" role="alert">

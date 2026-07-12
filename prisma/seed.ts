@@ -8,6 +8,7 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { GameMode } from "../lib/generated/prisma/enums";
+import { baseCostForRole } from "../lib/draftables/pricing";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -210,6 +211,20 @@ const PRO_PLAYERS: ProPlayerSeed[] = [
   },
 ];
 
+// Initial seed pricing only — real syncs (lib/draftables/riot-esports-player-sync.ts,
+// lib/draftables/champion-repricing.ts) overwrite this with win-rate-based pricing
+// once real standings/match data is available. Named pros (not "Player N"
+// placeholders) carry a "star" premium here as a reasonable starting guess.
+function championCost(role: string): number {
+  return baseCostForRole(role);
+}
+
+function proPlayerCost(name: string, role: string): number {
+  const base = baseCostForRole(role);
+  const isNamedStar = !name.startsWith("Player ");
+  return isNamedStar ? Math.round((base * 1.6) / 100_000) * 100_000 : base;
+}
+
 async function main() {
   console.log(`Seeding ${CHAMPIONS.length} champions…`);
   for (const champion of CHAMPIONS) {
@@ -218,10 +233,11 @@ async function main() {
       create: champion,
       update: champion,
     });
+    const cost = championCost(champion.primaryRole);
     await prisma.draftable.upsert({
       where: { championId: row.id },
-      create: { gameMode: GameMode.CHAMPION, championId: row.id },
-      update: {},
+      create: { gameMode: GameMode.CHAMPION, championId: row.id, cost },
+      update: { cost },
     });
   }
 
@@ -232,10 +248,11 @@ async function main() {
       create: pro,
       update: pro,
     });
+    const cost = proPlayerCost(pro.name, pro.role);
     await prisma.draftable.upsert({
       where: { proPlayerId: row.id },
-      create: { gameMode: GameMode.PRO_PLAYER, proPlayerId: row.id },
-      update: {},
+      create: { gameMode: GameMode.PRO_PLAYER, proPlayerId: row.id, cost },
+      update: { cost },
     });
   }
 

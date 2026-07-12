@@ -51,6 +51,13 @@ async function LeagueChrome({
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+      >
+        <span aria-hidden="true">←</span> Back to leagues
+      </Link>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
@@ -92,6 +99,7 @@ async function LeagueChrome({
 function LeagueChromeSkeleton() {
   return (
     <div className="space-y-6">
+      <div className="h-4 w-28 animate-pulse rounded-md bg-border/30" />
       <div className="flex items-center gap-3">
         <div className="h-8 w-48 animate-pulse rounded-md bg-border/50" />
         <div className="h-6 w-24 animate-pulse rounded-full bg-border/50" />
