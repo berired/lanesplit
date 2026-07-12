@@ -11,8 +11,8 @@ import { PrismaClient } from "../lib/generated/prisma/client";
 import { GameMode } from "../lib/generated/prisma/enums";
 import { baseCostForRole } from "../lib/draftables/pricing";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@lanesplit.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "password";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -230,6 +230,11 @@ function proPlayerCost(name: string, role: string): number {
 }
 
 async function seedAdmin() {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.log("ADMIN_EMAIL/ADMIN_PASSWORD not set — skipping admin account seed.");
+    return;
+  }
+
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
   await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
